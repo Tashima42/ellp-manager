@@ -14,20 +14,23 @@ const (
 )
 
 type Document struct {
-	ID               int          `db:"id" json:"id"`
-	Name             string       `db:"name" json:"name"`
-	UserID           string       `db:"user_id" json:"userId"`
-	RequesterID      string       `db:"requester_id" json:"requesterId"`
-	Type             DocumentType `db:"type" json:"type"`
-	Address          string       `db:"address" json:"address"`
-	Accepted         bool         `db:"accepted" json:"accepted"`
-	RequesterComment string       `db:"requester_comment" json:"requesterComment"`
-	CreatedAt        time.Time    `db:"created_at" json:"createdAt"`
-	UpdatedAt        time.Time    `db:"updated_at" json:"updatedAt"`
+	ID              int64        `db:"id" json:"id"`
+	Name            string       `db:"name" json:"name"`
+	UserID          int64        `db:"user_id" json:"userId"`
+	ReviewerID      int64        `db:"reviewer_id" json:"reviewerId"`
+	Type            DocumentType `db:"type" json:"type"`
+	Address         string       `db:"address" json:"address"`
+	Accepted        bool         `db:"accepted" json:"accepted"`
+	ReviewerComment string       `db:"reviewer_comment" json:"reviewerComment"`
+	CreatedAt       time.Time    `db:"created_at" json:"createdAt"`
+	UpdatedAt       time.Time    `db:"updated_at" json:"updatedAt"`
 }
 
-func CreateDocumentTxx(tx *sqlx.DB, d *Document) error {
-	query := "INSERT INTO documents(name, user_id, requester_id, type, created_at, updated_at) VALUES($1, $2, $3, $4, $5, $6);"
-	_, err := tx.Exec(query, d.Name, d.UserID, d.RequesterID, d.Type, time.Now(), time.Now())
-	return err
+func CreateDocumentTxx(tx *sqlx.Tx, d *Document) (id int64, err error) {
+	query := "INSERT INTO documents(name, user_id, reviewer_id, type, created_at, updated_at) VALUES($1, $2, $3, $4, $5, $6);"
+	result, err := tx.Exec(query, d.Name, d.UserID, d.ReviewerID, d.Type, time.Now(), time.Now())
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
 }

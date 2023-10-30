@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/jmoiron/sqlx"
@@ -16,9 +17,15 @@ import (
 )
 
 type Context struct {
-	Port   int
-	DB     *sqlx.DB
-	Logger *zap.SugaredLogger
+	Port     int
+	DB       *sqlx.DB
+	Logger   *zap.SugaredLogger
+	Validate *validator.Validate
+}
+
+type GlobalError struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }
 
 func main() {
@@ -68,9 +75,10 @@ func run(c *cli.Context) error {
 		return err
 	}
 	ec := &Context{
-		Port:   c.Int("port"),
-		DB:     db,
-		Logger: logger.Sugar(),
+		Port:     c.Int("port"),
+		DB:       db,
+		Logger:   logger.Sugar(),
+		Validate: validator.New(validator.WithRequiredStructEnabled()),
 	}
 	return runServer(ec)
 }
@@ -83,7 +91,7 @@ func runServer(ec *Context) error {
 			if errors.As(err, &e) {
 				code = e.Code
 			}
-			err = ctx.Status(code).JSON(map[string]string{"error": err.Error()})
+			err = ctx.Status(code).JSON(GlobalError{Success: false, Message: e.Error()})
 			if err != nil {
 				return ctx.Status(fiber.StatusInternalServerError).SendString("Internal Server Error")
 			}
@@ -92,12 +100,17 @@ func runServer(ec *Context) error {
 	})
 	app.Use(requestid.New())
 
-	cr := controllers.Controller{DB: ec.DB, Logger: ec.Logger}
+	cr := controllers.Controller{
+		DB:       ec.DB,
+		Logger:   ec.Logger,
+		Validate: ec.Validate,
+	}
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
 	app.Post("/user", cr.CreateUser)
+	app.Post("/document", cr.CreateDocument)
 
 	app.Listen(":" + strconv.Itoa(ec.Port))
 
