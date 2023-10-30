@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/jmoiron/sqlx"
 	"github.com/tashima42/ellp-manager/server/controllers"
 	"github.com/tashima42/ellp-manager/server/database"
@@ -68,6 +69,7 @@ func run(c *cli.Context) error {
 
 func runServer(ec *Context) error {
 	app := fiber.New()
+	app.Use(requestid.New())
 
 	cr := controllers.Controller{DB: ec.DB}
 

@@ -4,9 +4,9 @@ CREATE TABLE IF NOT EXISTS documents (
   'requester_id' INTEGER NOT NULL,
   'name' TEXT NOT NULL,
   'type' TEXT NOT NULL,
-  'accepted' INTEGER NOT NULL,
-  'address' TEXT NOT NULL,
-  'requester_comment' TEXT NOT NULL,
+  'accepted' INTEGER,
+  'address' TEXT,
+  'requester_comment' TEXT,
   'created_at' DATE NOT NULL,
   'updated_at' DATE NOT NULL,
 
