@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 	"strconv"
@@ -11,11 +12,13 @@ import (
 	"github.com/tashima42/ellp-manager/server/controllers"
 	"github.com/tashima42/ellp-manager/server/database"
 	"github.com/urfave/cli/v2"
+	"go.uber.org/zap"
 )
 
 type Context struct {
-	Port int
-	DB   *sqlx.DB
+	Port   int
+	DB     *sqlx.DB
+	Logger *zap.SugaredLogger
 }
 
 func main() {
@@ -60,18 +63,36 @@ func run(c *cli.Context) error {
 	}
 	defer database.Close(db)
 
+	logger, err := zap.NewProduction()
+	if err != nil {
+		return err
+	}
 	ec := &Context{
-		Port: c.Int("port"),
-		DB:   db,
+		Port:   c.Int("port"),
+		DB:     db,
+		Logger: logger.Sugar(),
 	}
 	return runServer(ec)
 }
 
 func runServer(ec *Context) error {
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
+			code := fiber.StatusInternalServerError
+			var e *fiber.Error
+			if errors.As(err, &e) {
+				code = e.Code
+			}
+			err = ctx.Status(code).JSON(map[string]string{"error": err.Error()})
+			if err != nil {
+				return ctx.Status(fiber.StatusInternalServerError).SendString("Internal Server Error")
+			}
+			return nil
+		},
+	})
 	app.Use(requestid.New())
 
-	cr := controllers.Controller{DB: ec.DB}
+	cr := controllers.Controller{DB: ec.DB, Logger: ec.Logger}
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")

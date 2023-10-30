@@ -3,8 +3,8 @@ package controllers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -12,50 +12,54 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/tashima42/ellp-manager/server/database"
 	"github.com/tashima42/ellp-manager/server/hash"
+	"go.uber.org/zap"
 )
 
 type Controller struct {
-	DB *sqlx.DB
+	DB     *sqlx.DB
+	Logger *zap.SugaredLogger
 }
 
 func (cr *Controller) CreateUser(c *fiber.Ctx) error {
 	requestID := fmt.Sprintf("%+v", c.Locals("requestid"))
-	log.Println(requestID + " - create user")
 	user := &database.User{}
-	log.Println(requestID + " - unmarshal request body")
+	cr.Logger.Info(requestID, " unmarshal request body")
 	if err := json.Unmarshal(c.Body(), user); err != nil {
 		return err
 	}
 
-	log.Println(requestID + " - starting transaction")
+	cr.Logger.Info(requestID, " starting transaction")
 	tx, err := cr.DB.BeginTxx(c.Context(), &sql.TxOptions{})
 	if err != nil {
 		return err
 	}
 
-	log.Println(requestID + " - looking for user with email " + user.Email)
+	cr.Logger.Info(requestID, " looking for user with email "+user.Email)
 	if _, err := database.GetUserByEmailTxx(tx, user.Email); err != nil {
-		log.Println(requestID + " - error: " + err.Error())
+		cr.Logger.Info(requestID, " error: "+err.Error())
 		if !strings.Contains(err.Error(), "no rows in result set") {
 			return err
 		}
-		log.Println(requestID + " - user doesn't exists, continue")
+		cr.Logger.Info(requestID, " user doesn't exists, continue")
 	} else {
-		log.Println(requestID + " - error: email was already registered")
+		zap.Error(errors.New(requestID + " email was already registered"))
 		return c.Status(http.StatusConflict).JSON(map[string]string{"error": "email " + user.Email + " already was registered"})
 	}
 
-	log.Println(requestID + " - hashing password")
+	cr.Logger.Info(requestID, " hashing password")
 	hashedPassword, err := hash.Password(user.Password)
 	if err != nil {
 		return err
 	}
 	user.Password = hashedPassword
 
-	log.Println(requestID + " - creating user")
+	cr.Logger.Info(requestID, " creating user")
 	if err := database.CreateUserTxx(tx, user); err != nil {
 		return err
 	}
-	log.Println(requestID + " - user created")
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	cr.Logger.Info(requestID, " user created")
 	return c.JSON(map[string]interface{}{"success": true})
 }
