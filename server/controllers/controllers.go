@@ -78,6 +78,10 @@ func (cr *Controller) CreateDocument(c *fiber.Ctx) error {
 		return err
 	}
 
+	if err := cr.Validate.Struct(document); err != nil {
+		return fiber.NewError(http.StatusBadRequest, err.Error())
+	}
+
 	cr.Logger.Info(requestID, " starting transaction")
 	tx, err := cr.DB.BeginTxx(c.Context(), &sql.TxOptions{})
 	if err != nil {
