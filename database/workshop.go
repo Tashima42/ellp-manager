@@ -53,7 +53,7 @@ type WorkshopUser struct {
 	UpdatedAt  time.Time        `db:"updated_at" json:"updatedAt"`
 }
 
-type Grades struct {
+type Grade struct {
 	ID         int64     `db:"id" json:"id"`
 	WorkshopID int64     `db:"workshop_id" json:"workshopId" validate:"required"`
 	UserID     int64     `db:"user_id" json:"userId" validate:"required"`
@@ -84,5 +84,11 @@ func CreateWorkshopClassTxx(tx *sqlx.Tx, wc *WorkshopClass) error {
 func CreateWorkshopUserTxx(tx *sqlx.Tx, wu *WorkshopUser) error {
 	query := "INSERT INTO workshop_user(workshop_id, user_id, role, created_at, updated_at) VALUES($1, $2, $3, $4, $5);"
 	_, err := tx.Exec(query, wu.WorkshopID, wu.UserID, wu.Role, time.Now(), time.Now())
+	return err
+}
+
+func CreateWorkshopGradeTxx(tx *sqlx.Tx, g *Grade) error {
+	query := "INSERT INTO grades(workshop_id, user_id, grade, created_at, updated_at) VALUES($1, $2, $3, $4, $5);"
+	_, err := tx.Exec(query, g.WorkshopID, g.UserID, g.Grade, time.Now(), time.Now())
 	return err
 }
