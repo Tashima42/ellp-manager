@@ -100,6 +100,7 @@ func runServer(ec *Context) error {
 	app.Post("/user", cr.CreateUser)
 	app.Post("/document", cr.CreateDocument)
 	app.Post("/workshop", cr.CreateWorkshop)
+	app.Post("/workshop/class", cr.CreateWorkshopClass)
 
 	app.Listen(":" + strconv.Itoa(ec.Port))
 

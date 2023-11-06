@@ -40,3 +40,35 @@ func (cr *Controller) CreateWorkshop(c *fiber.Ctx) error {
 
 	return c.JSON(map[string]bool{"success": true})
 }
+
+func (cr *Controller) CreateWorkshopClass(c *fiber.Ctx) error {
+	requestID := fmt.Sprintf("%+v", c.Locals("requestid"))
+	workshopClass := &database.WorkshopClass{}
+	cr.Logger.Info(requestID, " unmarshal request body")
+	if err := json.Unmarshal(c.Body(), workshopClass); err != nil {
+		return err
+	}
+
+	cr.Logger.Info(requestID, " validating body")
+	if err := cr.Validate.Struct(workshopClass); err != nil {
+		return fiber.NewError(http.StatusBadRequest, err.Error())
+	}
+
+	cr.Logger.Info(requestID, " starting transaction")
+	tx, err := cr.DB.BeginTxx(c.Context(), &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	cr.Logger.Info(requestID, " creating workshop class")
+	if err := database.CreateWorkshopClassTxx(tx, workshopClass); err != nil {
+		cr.Logger.Error(err)
+		return fmt.Errorf("failed to create workshop class %s", err.Error())
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return c.JSON(map[string]bool{"success": true})
+}

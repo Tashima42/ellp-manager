@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS workshops (
+CREATE TABLE IF NOT EXISTS workshop_classes (
   id INTEGER PRIMARY KEY,
   'workshop_id' INTEGER NOT NULL,
   'name' TEXT NOT NULL,
