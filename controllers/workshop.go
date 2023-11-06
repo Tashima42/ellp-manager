@@ -72,3 +72,42 @@ func (cr *Controller) CreateWorkshopClass(c *fiber.Ctx) error {
 
 	return c.JSON(map[string]bool{"success": true})
 }
+
+func (cr *Controller) CreateWorkshopUser(c *fiber.Ctx) error {
+	requestID := fmt.Sprintf("%+v", c.Locals("requestid"))
+	workshopUser := &database.WorkshopUser{}
+	cr.Logger.Info(requestID, " unmarshal request body")
+	if err := json.Unmarshal(c.Body(), workshopUser); err != nil {
+		return err
+	}
+
+	cr.Logger.Info(requestID, " validating body")
+	if err := cr.Validate.Struct(workshopUser); err != nil {
+		return fiber.NewError(http.StatusBadRequest, err.Error())
+	}
+
+	cr.Logger.Info(requestID, " parse workshop user role")
+	r, err := database.StringToWorkshopUserRole(workshopUser.StringRole)
+	if err != nil {
+		return fiber.NewError(http.StatusBadRequest, err.Error())
+	}
+	workshopUser.Role = r
+
+	cr.Logger.Info(requestID, " starting transaction")
+	tx, err := cr.DB.BeginTxx(c.Context(), &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	cr.Logger.Info(requestID, " creating workshop user")
+	if err := database.CreateWorkshopUserTxx(tx, workshopUser); err != nil {
+		cr.Logger.Error(err)
+		return fmt.Errorf("failed to create workshop user %s", err.Error())
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return c.JSON(map[string]bool{"success": true})
+}
