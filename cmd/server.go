@@ -15,10 +15,11 @@ import (
 )
 
 type Context struct {
-	Port     int
-	DB       *sqlx.DB
-	Logger   *zap.SugaredLogger
-	Validate *validator.Validate
+	Port      int
+	DB        *sqlx.DB
+	JWTSecret []byte
+	Logger    *zap.SugaredLogger
+	Validate  *validator.Validate
 }
 
 type GlobalError struct {
@@ -45,6 +46,13 @@ func ServerCommand() *cli.Command {
 				Aliases:  []string{"d"},
 				EnvVars:  []string{"DB_PATH"},
 			},
+			&cli.StringFlag{
+				Name:     "jwt-secret",
+				Usage:    "do not use this as a string flag, prefer setting the env var",
+				Required: true,
+				Aliases:  []string{"j"},
+				EnvVars:  []string{"JWT_SECRET"},
+			},
 		},
 		Action: run,
 	}
@@ -62,10 +70,11 @@ func run(c *cli.Context) error {
 		return err
 	}
 	ec := &Context{
-		Port:     c.Int("port"),
-		DB:       db,
-		Logger:   logger.Sugar(),
-		Validate: validator.New(validator.WithRequiredStructEnabled()),
+		Port:      c.Int("port"),
+		DB:        db,
+		JWTSecret: []byte(c.String("jwt-secret")),
+		Logger:    logger.Sugar(),
+		Validate:  validator.New(validator.WithRequiredStructEnabled()),
 	}
 	return runServer(ec)
 }
@@ -89,9 +98,10 @@ func runServer(ec *Context) error {
 	app.Use(requestid.New())
 
 	cr := controllers.Controller{
-		DB:       ec.DB,
-		Logger:   ec.Logger,
-		Validate: ec.Validate,
+		DB:        ec.DB,
+		JWTSecret: ec.JWTSecret,
+		Logger:    ec.Logger,
+		Validate:  ec.Validate,
 	}
 
 	app.Get("/", func(c *fiber.Ctx) error {
@@ -102,6 +112,7 @@ func runServer(ec *Context) error {
 	app.Post("/workshop", cr.CreateWorkshop)
 	app.Post("/workshop/class", cr.CreateWorkshopClass)
 	app.Post("/workshop/user", cr.CreateWorkshopUser)
+	app.Post("/signin", cr.SignIn)
 
 	app.Listen(":" + strconv.Itoa(ec.Port))
 

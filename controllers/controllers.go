@@ -7,7 +7,8 @@ import (
 )
 
 type Controller struct {
-	DB       *sqlx.DB
-	Logger   *zap.SugaredLogger
-	Validate *validator.Validate
+	DB        *sqlx.DB
+	JWTSecret []byte
+	Logger    *zap.SugaredLogger
+	Validate  *validator.Validate
 }
