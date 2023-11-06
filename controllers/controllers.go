@@ -11,8 +11,8 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
-	"github.com/tashima42/ellp-manager/server/database"
-	"github.com/tashima42/ellp-manager/server/hash"
+	"github.com/tashima42/ellp-manager/database"
+	"github.com/tashima42/ellp-manager/hash"
 	"go.uber.org/zap"
 )
 

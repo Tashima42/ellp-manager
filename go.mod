@@ -1,4 +1,4 @@
-module github.com/tashima42/ellp-manager/server
+module github.com/tashima42/ellp-manager
 
 go 1.21
 

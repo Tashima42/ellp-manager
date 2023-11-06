@@ -1,17 +1,15 @@
-package main
+package cmd
 
 import (
 	"errors"
-	"log"
-	"os"
 	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/jmoiron/sqlx"
-	"github.com/tashima42/ellp-manager/server/controllers"
-	"github.com/tashima42/ellp-manager/server/database"
+	"github.com/tashima42/ellp-manager/controllers"
+	"github.com/tashima42/ellp-manager/database"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 )
@@ -28,11 +26,10 @@ type GlobalError struct {
 	Message string `json:"message"`
 }
 
-func main() {
-	app := cli.App{
-		Name:                   "ellp",
-		Usage:                  "start the ellp-manager server",
-		UseShortOptionHandling: true,
+func ServerCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "server",
+		Usage: "start the ellp-manager server",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "port",
@@ -57,9 +54,6 @@ func main() {
 			},
 		},
 		Action: run,
-	}
-	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
 	}
 }
 
