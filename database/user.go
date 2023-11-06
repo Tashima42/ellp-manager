@@ -1,29 +1,47 @@
 package database
 
 import (
+	"errors"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 )
 
-type UserRole string
+var ErrInvalidUserRole error = errors.New("invalid user role")
+
+type UserRole int
 
 const (
-	UserRoleStudent     UserRole = "student"
-	UserRoleCoordinator UserRole = "coordinator"
-	UserRoleSecretary   UserRole = "secretary"
-	UserRoleInstructor  UserRole = "instructor"
+	UserRoleStudent     UserRole = 1
+	UserRoleCoordinator UserRole = 2
+	UserRoleSecretary   UserRole = 3
+	UserRoleInstructor  UserRole = 4
 )
 
+var UserRoles map[string]UserRole = map[string]UserRole{
+	"student":     UserRoleStudent,
+	"coordinator": UserRoleCoordinator,
+	"secretary":   UserRoleSecretary,
+	"instructor":  UserRoleInstructor,
+}
+
 type User struct {
-	ID        int64     `db:"id" json:"id"`
-	Name      string    `db:"name" json:"name" validate:"required"`
-	Email     string    `db:"email" json:"email" validate:"required"`
-	Password  string    `db:"password" json:"password" validate:"required"`
-	Address   string    `db:"address" json:"address" validate:"required"`
-	Role      UserRole  `db:"role" json:"role" validate:"required"`
-	CreatedAt time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+	ID         int64     `db:"id" json:"id"`
+	Name       string    `db:"name" json:"name" validate:"required"`
+	Email      string    `db:"email" json:"email" validate:"required"`
+	Password   string    `db:"password" json:"password" validate:"required"`
+	Address    string    `db:"address" json:"address" validate:"required"`
+	Role       UserRole  `db:"role"`
+	StringRole string    `json:"role" validate:"required"`
+	CreatedAt  time.Time `db:"created_at" json:"createdAt"`
+	UpdatedAt  time.Time `db:"updated_at" json:"updatedAt"`
+}
+
+func StringToUserRole(key string) (UserRole, error) {
+	if u, ok := UserRoles[key]; ok {
+		return u, nil
+	}
+	return -1, ErrInvalidUserRole
 }
 
 func CreateUserTxx(tx *sqlx.Tx, u *User) error {

@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS documents (
   'user_id' INTEGER NOT NULL,
   'reviewer_id' INTEGER NOT NULL,
   'name' TEXT NOT NULL,
-  'type' TEXT NOT NULL,
+  'type' INTEGER NOT NULL,
   'accepted' INTEGER,
   'address' TEXT,
   'reviewer_comment' TEXT,

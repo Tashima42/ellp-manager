@@ -73,6 +73,7 @@ func run(c *cli.Context) error {
 func runServer(ec *Context) error {
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
+			zap.Error(err)
 			code := fiber.StatusInternalServerError
 			var e *fiber.Error
 			if errors.As(err, &e) {
@@ -98,6 +99,7 @@ func runServer(ec *Context) error {
 	})
 	app.Post("/user", cr.CreateUser)
 	app.Post("/document", cr.CreateDocument)
+	app.Post("/workshop", cr.CreateWorkshop)
 
 	app.Listen(":" + strconv.Itoa(ec.Port))
 

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY,
-  'role' TEXT NOT NULL,
+  'role' INTEGER NOT NULL,
   'name' TEXT NOT NULL,
   'email' TEXT NOT NULL UNIQUE,
   'password' TEXT NOT NULL,
