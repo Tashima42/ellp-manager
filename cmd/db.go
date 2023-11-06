@@ -26,7 +26,7 @@ func migrateDownCommand() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "db-path",
-				Aliases:  []string{"p"},
+				Aliases:  []string{"d"},
 				Usage:    "sqlite database path",
 				Required: true,
 			},

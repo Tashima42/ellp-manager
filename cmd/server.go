@@ -45,13 +45,6 @@ func ServerCommand() *cli.Command {
 				Aliases:  []string{"d"},
 				EnvVars:  []string{"DB_PATH"},
 			},
-			&cli.BoolFlag{
-				Name:     "migrate-down",
-				Usage:    "migrate the database down and then up",
-				Required: false,
-				Aliases:  []string{"m"},
-				EnvVars:  []string{"MIGRATE_DOWN"},
-			},
 		},
 		Action: run,
 	}
