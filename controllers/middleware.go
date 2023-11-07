@@ -109,6 +109,10 @@ func (cr *Controller) ValidateToken(c *fiber.Ctx) error {
 
 	c.Locals("user", user)
 
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
 	return c.Next()
 }
 func (cr *Controller) ErrorHandler(ctx *fiber.Ctx, err error) error {
