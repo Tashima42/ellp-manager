@@ -96,6 +96,8 @@ func runServer(ec *Context) error {
 	app.Post("/workshop", cr.CreateWorkshop)
 	app.Post("/workshop/class", cr.CreateWorkshopClass)
 	app.Post("/workshop/user", cr.CreateWorkshopUser)
+	app.Post("/goal", cr.CreateGoal)
+	app.Post("/goal/attachment", cr.CreateGoalAttachment)
 
 	return app.Listen(":" + strconv.Itoa(ec.Port))
 }
