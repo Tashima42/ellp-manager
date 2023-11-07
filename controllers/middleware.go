@@ -19,6 +19,11 @@ type SignInUser struct {
 	Password string `json:"password" validate:"required"`
 }
 
+type GlobalError struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
 func (cr *Controller) SignIn(c *fiber.Ctx) error {
 	requestID := fmt.Sprintf("%+v", c.Locals("requestid"))
 	s := &SignInUser{}
@@ -53,13 +58,12 @@ func (cr *Controller) SignIn(c *fiber.Ctx) error {
 		return fiber.NewError(http.StatusUnauthorized, "incorrect password")
 	}
 
-	jwt, err := hash.NewJWT(cr.JWTSecret, map[string]interface{}{
-		"user": map[string]interface{}{
-			"id":    user.ID,
-			"email": user.Email,
-			"role":  user.Role,
-		},
-	})
+	ac := hash.AuthClaims{}
+	ac.User.ID = user.ID
+	ac.User.Email = user.Email
+	ac.User.Role = user.Role
+
+	jwt, err := hash.NewJWT(cr.JWTSecret, ac)
 	if err != nil {
 		return errors.New("failed to generate jwt: " + err.Error())
 	}
@@ -71,4 +75,53 @@ func (cr *Controller) SignIn(c *fiber.Ctx) error {
 	c.Cookie(cookie)
 
 	return c.JSON(map[string]interface{}{"token": jwt})
+}
+
+func (cr *Controller) ValidateToken(c *fiber.Ctx) error {
+	requestID := fmt.Sprintf("%+v", c.Locals("requestid"))
+	cr.Logger.Info(requestID, " getting auth token cookie")
+	token := c.Cookies("auth-token")
+	if token == "" {
+		token = c.GetReqHeaders()["authorization"][0]
+	}
+	if token == "" {
+		cr.Logger.Info(requestID, " missing auth token cookie")
+		return fiber.NewError(http.StatusUnauthorized, "missing auth token")
+	}
+	cr.Logger.Info(requestID, " parsing auth token")
+	ac, err := hash.ParseJWT(cr.JWTSecret, token)
+	if err != nil {
+		cr.Logger.Error(requestID, err)
+		return err
+	}
+
+	cr.Logger.Info(requestID, " starting transaction")
+	tx, err := cr.DB.BeginTxx(c.Context(), &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	cr.Logger.Info("getting user")
+	user, err := database.GetUserByIDTxx(tx, ac.User.ID)
+	if err != nil {
+		return err
+	}
+
+	c.Locals("user", user)
+
+	return c.Next()
+}
+func (cr *Controller) ErrorHandler(ctx *fiber.Ctx, err error) error {
+	requestID := ctx.Locals("requestid")
+	cr.Logger.Error(requestID, err)
+	code := fiber.StatusInternalServerError
+	var e *fiber.Error
+	if errors.As(err, &e) {
+		code = e.Code
+	}
+	err = ctx.Status(code).JSON(GlobalError{Success: false, Message: e.Error()})
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).SendString("Internal Server Error")
+	}
+	return nil
 }

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"strconv"
 
 	"github.com/go-playground/validator/v10"
@@ -20,11 +19,6 @@ type Context struct {
 	JWTSecret []byte
 	Logger    *zap.SugaredLogger
 	Validate  *validator.Validate
-}
-
-type GlobalError struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
 }
 
 func ServerCommand() *cli.Command {
@@ -80,41 +74,28 @@ func run(c *cli.Context) error {
 }
 
 func runServer(ec *Context) error {
-	app := fiber.New(fiber.Config{
-		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
-			zap.Error(err)
-			code := fiber.StatusInternalServerError
-			var e *fiber.Error
-			if errors.As(err, &e) {
-				code = e.Code
-			}
-			err = ctx.Status(code).JSON(GlobalError{Success: false, Message: e.Error()})
-			if err != nil {
-				return ctx.Status(fiber.StatusInternalServerError).SendString("Internal Server Error")
-			}
-			return nil
-		},
-	})
-	app.Use(requestid.New())
-
 	cr := controllers.Controller{
 		DB:        ec.DB,
 		JWTSecret: ec.JWTSecret,
 		Logger:    ec.Logger,
 		Validate:  ec.Validate,
 	}
-
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
+	app := fiber.New(fiber.Config{ErrorHandler: cr.ErrorHandler})
+	app.Use(requestid.New())
+	app.Get("/healthcheck", func(c *fiber.Ctx) error {
+		return c.SendString("success")
+	})
+	app.Post("/signin", cr.SignIn)
+	app.Use(cr.ValidateToken)
+	app.Get("/hello", func(c *fiber.Ctx) error {
+		user := c.Locals("user").(*database.User)
+		return c.SendString("Hello, " + user.Name)
 	})
 	app.Post("/user", cr.CreateUser)
 	app.Post("/document", cr.CreateDocument)
 	app.Post("/workshop", cr.CreateWorkshop)
 	app.Post("/workshop/class", cr.CreateWorkshopClass)
 	app.Post("/workshop/user", cr.CreateWorkshopUser)
-	app.Post("/signin", cr.SignIn)
 
-	app.Listen(":" + strconv.Itoa(ec.Port))
-
-	return nil
+	return app.Listen(":" + strconv.Itoa(ec.Port))
 }
